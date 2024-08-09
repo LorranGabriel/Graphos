@@ -313,7 +313,7 @@ public class menuCadastro extends javax.swing.JFrame {
         
         if (grafo.checkIsEmpty()){
             String fileName = this.fileField.getText();
-            String relativePath = "src/" + fileName;
+            String relativePath = "src" + File.separator + fileName;
             File file = new File(relativePath);
             uploadFileButton.setBorder(UIManager.getBorder("Button.border"));
 
@@ -371,7 +371,7 @@ public class menuCadastro extends javax.swing.JFrame {
         // TODO add your handling code here:
     // TODO add your handling code here:
         String fileName = this.fileField.getText();
-        String relativePath = "src/" + fileName;
+        String relativePath = "src" + File.separator + fileName;
         File file = new File(relativePath);
 
         String absolutePath = file.getAbsolutePath();
