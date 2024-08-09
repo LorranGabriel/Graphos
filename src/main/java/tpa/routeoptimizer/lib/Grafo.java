@@ -241,7 +241,7 @@ public class Grafo<T> implements IGrafo<T> {
         // Calcula a árvore geradora mínima
         ArrayList<Aresta<T>> agm = new ArrayList<>();
         for (Aresta<T> aresta : arestas) {
-            Vertice<T> origem = findOrigem(aresta, vertices);
+            Vertice<T> origem = aresta.getOrigem();
             Vertice<T> destino = aresta.getDestino();
 
             Vertice<T> u = find(origem, pai);
@@ -256,6 +256,53 @@ public class Grafo<T> implements IGrafo<T> {
         return agm;
     }
 
+    
+    public ArrayList<Aresta<T>> calcularAGM2() {
+        Set<Aresta<T>> conjuntoArestas = new HashSet<>();
+        ArrayList<Aresta<T>> arestas = new ArrayList<>();
+
+        // Coleta todas as arestas de todos os vértices
+        for (Vertice<T> vertice : vertices) {
+            for (Aresta<T> aresta : vertice.getDestinos()) {
+                // Adiciona aresta ao conjunto para evitar duplicatas
+                conjuntoArestas.add(aresta);
+            }
+        }
+
+        // Converte o conjunto de arestas para uma lista
+        arestas.addAll(conjuntoArestas);
+
+        // Ordena as arestas pelo peso
+        Collections.sort(arestas, Comparator.comparingDouble(Aresta::getPeso));
+
+        // Inicializa o conjunto disjunto
+        Map<Vertice<T>, Vertice<T>> pai = new HashMap<>();
+        Map<Vertice<T>, Integer> rank = new HashMap<>();
+
+        // Inicializa os conjuntos disjuntos para cada vértice
+        for (Vertice<T> vertice : vertices) {
+            pai.put(vertice, vertice);
+            rank.put(vertice, 0);
+        }
+
+        // Calcula a árvore geradora mínima
+        ArrayList<Aresta<T>> agm = new ArrayList<>();
+        for (Aresta<T> aresta : arestas) {
+            Vertice<T> origem = aresta.getOrigem();
+            Vertice<T> destino = aresta.getDestino();
+
+            Vertice<T> u = find(origem, pai);
+            Vertice<T> v = find(destino, pai);
+
+            if (!u.equals(v)) {
+                agm.add(aresta);
+                union(u, v, pai, rank);
+            }
+        }
+
+        return agm;
+    }
+    
     public Grafo<T> criarGrafoAGM() {
         Grafo<T> novoGrafo = new Grafo<>();
         ArrayList<Aresta<T>> arestasAGM = calcularAGM();
@@ -368,7 +415,7 @@ public class Grafo<T> implements IGrafo<T> {
         throw new IllegalArgumentException("Não existe uma aresta conectando as duas cidades.");
     }
     
-    public void calcMinRoute(T origem, T destino, JTextArea resultField) {
+    public void calcMinRoute2(T origem, T destino, JTextArea resultField) {
         Vertice<T> verticeOrigem = obterVertice(origem);
         Vertice<T> verticeDestino = obterVertice(destino);
 
@@ -412,17 +459,87 @@ public class Grafo<T> implements IGrafo<T> {
         if (caminho.size() == 1 && !caminho.get(0).equals(origem)) {
             throw new IllegalArgumentException("Não há caminho entre as duas cidades.");
         }
-              StringBuilder resultado = new StringBuilder();
-                resultado.append("Caminho mínimo: ");
-                for (T cidade : caminho) {
-                    resultado.append(cidade).append(" -> ");
-                }
-                resultado.setLength(resultado.length() - 4);  // Remove o último " -> "
-                resultado.append("\nDistância total: ").append(distancias.get(verticeDestino));
+        
+        StringBuilder resultado = new StringBuilder();
+        resultado.append("Caminho mínimo: ");
+        for (T cidade : caminho) {
+            resultado.append(cidade).append(" -> ");
+        }
+        
+        resultado.setLength(resultado.length() - 4);  // Remove o último " -> "
+        resultado.append("\nDistância total: ").append(distancias.get(verticeDestino));
 
-                resultField.setText(resultado.toString());
+        resultField.setText(resultado.toString());
  
     }
+    
+    public void calcMinRoute(T origem, T destino, JTextArea resultField) {
+        Vertice<T> verticeOrigem = obterVertice(origem);
+        Vertice<T> verticeDestino = obterVertice(destino);
+
+        if (verticeOrigem == null || verticeDestino == null) {
+            throw new IllegalArgumentException("Uma ou ambas as cidades não existem no grafo.");
+        }
+
+        Map<Vertice<T>, Float> distancias = new HashMap<>();
+        Map<Vertice<T>, Vertice<T>> antecessores = new HashMap<>();
+        ArrayList<Vertice<T>> naoVisitados = new ArrayList<>(vertices);
+
+        for (Vertice<T> vertice : vertices) {
+            distancias.put(vertice, Float.MAX_VALUE);
+            antecessores.put(vertice, null);
+        }
+
+        distancias.put(verticeOrigem, 0f);
+
+        while (!naoVisitados.isEmpty()) {
+            // Encontrar o vértice não visitado com a menor distância
+            Vertice<T> atual = null;
+            for (Vertice<T> vertice : naoVisitados) {
+                if (atual == null || distancias.get(vertice) < distancias.get(atual)) {
+                    atual = vertice;
+                }
+            }
+
+            if (atual == null) {
+                break; // Não há mais vértices acessíveis
+            }
+
+            naoVisitados.remove(atual);
+
+            for (Aresta<T> aresta : atual.getDestinos()) {
+                Vertice<T> vizinho = aresta.getDestino();
+                float novaDistancia = distancias.get(atual) + aresta.getPeso();
+
+                if (novaDistancia < distancias.get(vizinho)) {
+                    distancias.put(vizinho, novaDistancia);
+                    antecessores.put(vizinho, atual);
+                }
+            }
+        }
+
+        ArrayList<T> caminho = new ArrayList<>();
+        for (Vertice<T> vertice = verticeDestino; vertice != null; vertice = antecessores.get(vertice)) {
+            caminho.add(vertice.getValor());
+        }
+        Collections.reverse(caminho);
+
+        if (caminho.size() == 1 && !caminho.get(0).equals(origem)) {
+            throw new IllegalArgumentException("Não há caminho entre as duas cidades.");
+        }
+
+        StringBuilder resultado = new StringBuilder();
+        resultado.append("Caminho mínimo: ");
+        for (T cidade : caminho) {
+            resultado.append(cidade).append(" -> ");
+        }
+
+        resultado.setLength(resultado.length() - 4); // Remove o último " -> "
+        resultado.append("\nDistância total: ").append(distancias.get(verticeDestino));
+
+        resultField.setText(resultado.toString());
+    }
+
     
     public String calcularAGMStr() {
         ArrayList<Aresta<T>> arestas = new ArrayList<>();
